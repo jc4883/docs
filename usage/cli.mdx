@@ -1,0 +1,114 @@
+---
+title: "Fetch tweets from the command line"
+description: "Run npx tsx src/fetch-tweets.ts directly to pull your home timeline and AI keyword search results, with flags to control format, output path, result count, and single-tweet lookup."
+---
+
+You can run the tweet fetcher directly from your terminal without going through Claude. This is useful for scripting, cron-based scheduling, piping output to other tools, or inspecting the raw data before handing it to Claude. By default the command fetches your home timeline and AI keyword search results together, deduplicates them, and prints formatted markdown to stdout.
+
+## Basic usage
+
+```bash
+npx tsx src/fetch-tweets.ts
+```
+
+This runs both the home timeline fetch and the AI keyword search, then prints a markdown digest to stdout. Progress and error messages go to stderr so they don't pollute the output.
+
+## All flags
+
+```bash
+npx tsx src/fetch-tweets.ts [--format digest|json] [--output-file <path>] [--max-results <n>] [--tweet-id <id>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--format` | string | `digest` | Output format: `digest` (markdown) or `json` |
+| `--output-file` | string | — | Write output to this file instead of stdout |
+| `--max-results` | number | from config | Override `home_timeline_max_results` for this run |
+| `--tweet-id` | string | — | Fetch a single tweet by ID (skips timeline and search) |
+
+### `--format digest|json`
+
+Controls the output format. Defaults to `digest`.
+
+- `digest` — Human-readable markdown, sorted by relevance score. See [Output formats](/usage/output-formats) for the full structure.
+- `json` — Raw Twitter API response. Useful for piping to other tools or custom processing.
+
+<CodeGroup>
+
+```bash digest (default)
+npx tsx src/fetch-tweets.ts --format digest
+```
+
+```bash json
+npx tsx src/fetch-tweets.ts --format json
+```
+
+</CodeGroup>
+
+### `--output-file <path>`
+
+Write output to a file instead of stdout. The file is created or overwritten. Progress logs still go to stderr.
+
+```bash
+npx tsx src/fetch-tweets.ts --output-file data/my-digest.md
+```
+
+### `--max-results <n>`
+
+Override the `home_timeline_max_results` value from your `config/keywords.yaml`. Useful when you want a quick sample or need to stay within API rate limits.
+
+```bash
+npx tsx src/fetch-tweets.ts --max-results 25
+```
+
+### `--tweet-id <id>`
+
+Switch to single-tweet lookup mode. Fetches only the tweet with the given ID, resolves its referenced chain, and outputs it. Useful for inspecting a specific tweet and its full context.
+
+```bash
+npx tsx src/fetch-tweets.ts --tweet-id 1234567890123456789
+```
+
+<Note>
+  Single-tweet lookup works with a Bearer Token alone. You do not need full OAuth credentials for this mode.
+</Note>
+
+## What happens on each run
+
+When you run the fetcher in normal (non-single-tweet) mode, it performs these steps in order:
+
+1. **Home timeline fetch** — Pages through your home timeline from the configured lookback window (default: last 6 hours), up to `home_timeline_max_results` tweets. Requires OAuth 1.0a credentials.
+2. **AI keyword search** — Runs two relevancy-sorted search queries covering `AI OR LLM OR GPT OR Claude` and `"frontier model" OR "foundation model" OR "open source AI"`, excluding retweets and replies.
+3. **Reference chain resolution** — Any referenced tweet IDs not already in the response are fetched in batches of up to 100, up to 2 levels deep. This is what enables the full quote and reply chain display.
+4. **Deduplication** — Tweets appearing in both the timeline and search results are deduplicated by ID.
+5. **Raw JSON save** — The merged raw API response is always saved to `data/home-feed-<timestamp>.json`, regardless of the `--format` flag.
+6. **Output** — The formatted result is written to stdout (or `--output-file` if specified).
+
+## Fetching sources
+
+Both sources run together by default every time you invoke the fetcher. There is no flag to run only one source — the combined result produces the best coverage for the digest.
+
+The home timeline gives you personalized content from accounts you follow. The keyword search adds relevant AI content you might have missed, sorted by Twitter's relevancy algorithm.
+
+<Warning>
+  Home timeline access requires OAuth 1.0a context — all four tokens in your `.env` file. If only the Bearer Token is present, the home timeline fetch will fail with an error, and the command will exit before producing output.
+</Warning>
+
+## Errors and progress
+
+All progress information and warnings are written to stderr:
+
+```
+[INFO] Fetched page: 100 tweets so far...
+[INFO] Resolving 14 referenced tweets (depth 1)...
+[INFO] Search "AI OR LLM OR GPT OR Claude lang:en..." returned 48 tweets
+[INFO] 127 unique tweets after deduplication
+[INFO] Raw data saved to data/home-feed-2024-01-15T10-30-00.json
+```
+
+Only the final formatted output goes to stdout, so you can safely pipe it:
+
+```bash
+npx tsx src/fetch-tweets.ts | pbcopy
+npx tsx src/fetch-tweets.ts --format json | jq '.data | length'
+```

@@ -1,0 +1,80 @@
+---
+title: "Configuration options for Muscat"
+description: "Complete reference for every environment variable and YAML setting Muscat reads at startup, plus how CLI flags override those values at runtime."
+---
+
+Muscat reads configuration from two sources: a `.env` file for credentials and a `config/keywords.yaml` file for runtime behaviour. Together they control which Twitter/X endpoints Muscat can reach, how far back into your timeline it looks, and how many tweets it fetches per run. CLI flags can override the YAML values for a single invocation without touching the file on disk.
+
+## Environment variables
+
+Copy `config/example.env` to `.env` in the project root and fill in your credentials before running any command. Muscat loads this file automatically on startup via `dotenv`.
+
+<ParamField path="TWITTER_BEARER_TOKEN" type="string" required>
+  App-level Bearer Token used for all unauthenticated API calls, including keyword search and single-tweet lookup. Every Muscat command that contacts the Twitter/X API requires this token. You can generate one from the Twitter Developer Portal under your app's **Keys and tokens** page.
+</ParamField>
+
+<ParamField path="TWITTER_API_KEY" type="string">
+  OAuth 1.0a app API key. Required together with the three tokens below to access your home timeline and to post tweets. If any of the four OAuth credentials is absent, home timeline fetching and tweet posting are silently disabled.
+</ParamField>
+
+<ParamField path="TWITTER_API_SECRET" type="string">
+  OAuth 1.0a app API secret that pairs with `TWITTER_API_KEY`. Must be set alongside the other three OAuth values to enable user-context operations.
+</ParamField>
+
+<ParamField path="TWITTER_ACCESS_TOKEN" type="string">
+  OAuth 1.0a user access token. Grants Muscat permission to read your personal home timeline on your behalf. Generate this from the Developer Portal after authorising your app with your account.
+</ParamField>
+
+<ParamField path="TWITTER_ACCESS_TOKEN_SECRET" type="string">
+  OAuth 1.0a user access token secret that pairs with `TWITTER_ACCESS_TOKEN`. All four OAuth values must be present together; supplying only some of them has no effect and home timeline access will remain disabled.
+</ParamField>
+
+<Warning>
+  `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, and `TWITTER_ACCESS_TOKEN_SECRET` are individually optional fields, but they function as a group. Muscat checks for all four at once — if any one is missing, the entire OAuth 1.0a user context is considered unavailable and home timeline fetching will fail with an error.
+</Warning>
+
+## `config/keywords.yaml`
+
+This file controls how much data Muscat fetches and how far back in time it looks. Edit it to tune Muscat for your timeline's volume and your preferred digest frequency.
+
+<ParamField path="home_timeline_max_results" type="number" default="100">
+  Maximum number of tweets to fetch from your home timeline per run. Muscat paginates in batches of up to 100, so a value of 200 means at least two API calls. Increase this for busier timelines or when running less frequently than the default twice-daily schedule.
+</ParamField>
+
+<ParamField path="lookback_hours" type="number" default="6">
+  How many hours into the past Muscat looks for tweets. Any tweet older than this window is excluded before the digest is built. Set this to match your run cadence — for example, `12` if you run once a day, or `6` for the default twice-daily schedule.
+</ParamField>
+
+## Runtime overrides
+
+Two CLI flags let you override YAML values for a single run without editing the file. The file on disk is not modified.
+
+| Flag | Overrides | Description |
+|------|-----------|-------------|
+| `--max-results <n>` | `home_timeline_max_results` | Fetch at most `n` tweets from the home timeline for this run only. |
+| `--format <mode>` | Output format | Switch between `digest` (markdown) and `json` output for this run. |
+
+See the [CLI flags reference](/reference/cli-flags) for the full list of available flags and usage examples.
+
+## Full configuration example
+
+<CodeGroup>
+
+```bash .env
+TWITTER_BEARER_TOKEN=AAA...your_bearer_token_here
+TWITTER_API_KEY=your_api_key
+TWITTER_API_SECRET=your_api_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
+```
+
+```yaml config/keywords.yaml
+home_timeline_max_results: 100
+lookback_hours: 6
+```
+
+</CodeGroup>
+
+<Note>
+  The Twitter/X Basic API tier ($100/month) is required to use both keyword search and home timeline access together. The free tier is extremely limited and will prevent most Muscat features from working correctly.
+</Note>

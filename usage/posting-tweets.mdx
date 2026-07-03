@@ -1,0 +1,94 @@
+---
+title: "Post quote-tweets from the digest workflow"
+description: "After Claude presents the AI digest, you can ask it to draft and post a quote-tweet with your commentary — Claude will confirm the exact text and tweet ID before posting anything."
+---
+
+After Claude presents your AI digest, you can post a quote-tweet directly from the same session without switching to another app. Claude drafts the tweet text, shows you the exact content and target tweet ID for confirmation, and only then runs the post command. You can also run the CLI directly if you already know the tweet ID and text you want to use.
+
+## Posting from the digest workflow
+
+Once Claude has presented the digest, ask it to quote-tweet any item:
+
+```
+Quote tweet https://x.com/username/status/1234567890 with: Your insight or commentary here.
+```
+
+Or reference the tweet by description:
+
+```
+Quote the paper about attention mechanisms from the Research section with: This is the most important benchmark result of the quarter.
+```
+
+Claude will:
+1. Identify the tweet ID from the URL or context
+2. Draft the tweet text
+3. Show you exactly what it will post and which tweet it will quote
+4. Wait for your explicit approval before running the command
+
+When you confirm, Claude runs:
+
+```bash
+npx tsx src/post-tweet.ts --text "Your commentary here" --quote-tweet-id "1234567890"
+```
+
+<Warning>
+  Always confirm the exact tweet text and tweet ID before Claude posts. Claude will never post without your explicit approval — it will always show you the full command it intends to run and wait for you to say yes.
+</Warning>
+
+## Running the CLI directly
+
+You can post a quote-tweet without Claude by running the command yourself:
+
+```bash
+npx tsx src/post-tweet.ts --text "Your commentary here" --quote-tweet-id "TWEET_ID"
+```
+
+The CLI also supports posting a reply instead of a quote-tweet:
+
+```bash
+npx tsx src/post-tweet.ts --text "Your reply here" --reply-to-id "TWEET_ID"
+```
+
+Both `--quote-tweet-id` and `--reply-to-id` are optional. You can also post a standalone tweet with just `--text`.
+
+On success, the CLI prints the URL of the posted tweet:
+
+```
+[OK] Posted tweet: https://x.com/i/status/9876543210987654321
+```
+
+## Finding a tweet ID
+
+The tweet ID is the number at the end of any tweet URL.
+
+```
+https://x.com/username/status/1234567890123456789
+                               ^^^^^^^^^^^^^^^^^^^
+                               This is the tweet ID
+```
+
+In the digest output, every tweet includes a direct link in this format, so you can copy the ID from the link shown in the digest.
+
+<Tip>
+  You can also pass the full tweet URL to Claude when asking it to quote-tweet — it will extract the ID automatically. You don't need to copy just the numeric ID yourself.
+</Tip>
+
+## Credentials required for posting
+
+<Note>
+  Posting tweets requires OAuth 1.0a credentials — all four tokens in your `.env` file. A Bearer Token alone is not sufficient for write operations.
+
+  The four required values are:
+  - `TWITTER_API_KEY`
+  - `TWITTER_API_SECRET`
+  - `TWITTER_ACCESS_TOKEN`
+  - `TWITTER_ACCESS_TOKEN_SECRET`
+
+  The keyword search and single-tweet lookup work with just the Bearer Token, but any write operation (posting, quote-tweeting, replying) requires full OAuth.
+</Note>
+
+If any of the four OAuth tokens are missing, the CLI will exit with:
+
+```
+[ERROR] OAuth credentials required. Fill in all 4 tokens in .env
+```

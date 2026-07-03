@@ -1,0 +1,104 @@
+---
+title: "Configure Muscat: credentials and digest settings"
+description: "Reference for all Muscat configuration options — Twitter API credentials in .env and digest behavior settings in config/keywords.yaml."
+---
+
+Muscat reads its configuration from two files: a `.env` file at the project root for Twitter API credentials, and `config/keywords.yaml` for digest behavior settings. This page documents every option in both files so you can tune Muscat to your workflow.
+
+## Twitter API credentials (`.env`)
+
+Copy `config/example.env` to `.env` at the project root and fill in the values below. Muscat loads this file automatically on startup using `dotenv`.
+
+```bash .env
+TWITTER_BEARER_TOKEN=your_bearer_token_here
+TWITTER_API_KEY=your_api_key_here
+TWITTER_API_SECRET=your_api_secret_here
+TWITTER_ACCESS_TOKEN=your_access_token_here
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret_here
+```
+
+<Warning>
+  Home timeline access requires all four OAuth 1.0a tokens (`TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`) in addition to the Bearer Token. The Twitter API Basic tier ($100/mo) is required for both search and home timeline access. Without it, the free tier is severely rate-limited and home timeline calls will fail.
+</Warning>
+
+### Credential reference
+
+<ParamField path="TWITTER_BEARER_TOKEN" type="string" required>
+  App-level Bearer Token from the Twitter developer portal. Required for all tweet fetching. If this is the only credential you provide, Muscat runs in search-only mode — it fetches AI keyword search results but cannot access your home timeline.
+</ParamField>
+
+<ParamField path="TWITTER_API_KEY" type="string">
+  The API Key (also called Consumer Key) for your Twitter developer app. Found in the **Keys and Tokens** section of your app in the developer portal. Required for home timeline access.
+</ParamField>
+
+<ParamField path="TWITTER_API_SECRET" type="string">
+  The API Key Secret (also called Consumer Secret) for your Twitter developer app. Found alongside the API Key in the developer portal. Required for home timeline access.
+</ParamField>
+
+<ParamField path="TWITTER_ACCESS_TOKEN" type="string">
+  The OAuth 1.0a user Access Token generated for your account. This grants Muscat permission to read your home timeline on your behalf. Required for home timeline access.
+</ParamField>
+
+<ParamField path="TWITTER_ACCESS_TOKEN_SECRET" type="string">
+  The OAuth 1.0a user Access Token Secret that pairs with your Access Token. Required for home timeline access.
+</ParamField>
+
+## Digest settings (`config/keywords.yaml`)
+
+The `config/keywords.yaml` file controls how many tweets Muscat fetches and how far back it looks. Edit this file to adjust the scope of each digest run.
+
+```yaml config/keywords.yaml
+home_timeline_max_results: 100
+lookback_hours: 6
+```
+
+### Settings reference
+
+<ParamField path="home_timeline_max_results" type="number" default="100">
+  Maximum number of tweets to fetch from your home timeline per run. Muscat pages through results until it reaches this limit or runs out of tweets within the lookback window. Higher values give a more complete picture but take longer to fetch and process.
+</ParamField>
+
+<ParamField path="lookback_hours" type="number" default="6">
+  How many hours back to look for tweets. Muscat uses `start_time` on all API requests, so only tweets published within this window are included. The default of `6` works well for twice-daily digest runs (8am and 5pm). Increase this if you run Muscat less frequently.
+</ParamField>
+
+## Adjusting digest behavior
+
+### Widening the lookback window
+
+If you run Muscat once a day instead of twice, set `lookback_hours: 24` to avoid missing content:
+
+```yaml config/keywords.yaml
+home_timeline_max_results: 200
+lookback_hours: 24
+```
+
+### Narrowing the result count
+
+If the digest feels too long, reduce `home_timeline_max_results`. A value of `50` limits the home timeline fetch to the 50 most recent tweets in the window:
+
+```yaml config/keywords.yaml
+home_timeline_max_results: 50
+lookback_hours: 6
+```
+
+### Overriding result count at runtime
+
+You can override `home_timeline_max_results` for a single run using the `--max-results` flag without editing the YAML file:
+
+```bash
+npx tsx src/fetch-tweets.ts --max-results 50
+```
+
+<Note>
+  The `--max-results` flag overrides `home_timeline_max_results` from `keywords.yaml` for that run only. The YAML value is used for all other runs, including those triggered by the `/summarize-ai-news` slash command.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Twitter API setup" icon="key" href="/guides/twitter-api-setup">
+    Step-by-step guide to creating a Twitter developer app and obtaining your credentials.
+  </Card>
+  <Card title="CLI reference" icon="code" href="/reference/cli-flags">
+    All CLI flags for output format, file output, and single tweet lookups.
+  </Card>
+</CardGroup>

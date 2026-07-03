@@ -1,0 +1,107 @@
+---
+title: "Summarize AI news with the slash command"
+description: "Run /summarize-ai-news in Claude Code or Claude Desktop to fetch your Twitter timeline and produce a structured AI digest across five curated sections — in one step."
+---
+
+The `/summarize-ai-news` slash command is the primary way to use Muscat. When you invoke it, Claude installs dependencies if needed, runs the tweet fetcher, reads the full output including nested tweet chains, and produces a structured digest that surfaces the most substantive AI content from your timeline and keyword searches — all without leaving your Claude session.
+
+## How to invoke the command
+
+Type the command directly in Claude Code or Claude Desktop:
+
+```
+/summarize-ai-news
+```
+
+Claude will handle everything: installing dependencies, running `npx tsx src/fetch-tweets.ts`, processing the output, and presenting the digest.
+
+<Note>
+  The command requires the `.claude/commands/summarize-ai-news.md` file to be present in the project root. If you cloned the Muscat repository, this file is already in place.
+</Note>
+
+## What happens when you run it
+
+<Steps>
+  <Step title="Install dependencies">
+    Claude runs `npm install` if `node_modules` is missing or out of date.
+  </Step>
+  <Step title="Fetch tweets">
+    Claude runs `npx tsx src/fetch-tweets.ts`, which pulls your home timeline and AI keyword search results, resolves all referenced tweet chains (quotes, replies — up to 2 levels deep), and saves raw JSON to `data/home-feed-<timestamp>.json`.
+  </Step>
+  <Step title="Read the output">
+    Claude reads the full markdown output, including nested quoted tweets and reply context, to understand every conversation in context.
+  </Step>
+  <Step title="Prioritize substantive content">
+    Claude scores and filters the tweets before writing the digest (see [Content quality rules](#content-quality-rules) below).
+  </Step>
+  <Step title="Present the digest">
+    Claude produces the structured AI Digest across five sections (see [Digest sections](#digest-sections) below).
+  </Step>
+</Steps>
+
+## Digest sections
+
+Every digest is organized into five sections so you can navigate to what matters most.
+
+### Deep Reads
+
+Substantive long-form posts and threads worth reading carefully. For each entry, Claude shows:
+- The full quote chain if the tweet is quoting or responding to another post — both sides of the conversation are shown inline
+- A 2–3 sentence summary of the core argument or insight
+- Why it matters
+- Author handles and links
+
+### Research & Papers
+
+Notable new papers, benchmarks, and research results. Each entry includes a brief description of findings and why they're significant.
+
+### Industry Moves
+
+Company announcements, product launches, model releases, and funding rounds — only when substantive, not hype.
+
+### Notable Takes
+
+Sharp or contrarian observations worth thinking about, even if short.
+
+### Quick Hits
+
+One-liners covering the remaining noteworthy items that don't fit the sections above.
+
+## Content quality rules
+
+Claude applies explicit prioritization and filtering rules when building the digest.
+
+**What gets included:**
+
+- Long-form posts (`note_tweet` content, longer than 280 characters) with original analysis
+- Deep threads breaking down a topic
+- Quote chains where the author adds meaningful commentary to another substantive post
+- Tweets with high bookmark counts — a strong signal that people are saving content to read later
+- Notable new papers, research results, or technical deep-dives
+
+**What gets skipped:**
+
+- Retweets of the same story — topics are deduplicated, not just tweet IDs
+- Spam, promotional content, and engagement bait
+- One-liners that are pure reactions ("wow", "this is insane") unless the linked content is substantive
+- Empty retweets with no added commentary
+
+<Tip>
+  Depth beats engagement in the digest. A 50-like long-form post with original thinking will rank above a 5,000-like one-liner.
+</Tip>
+
+## Tweet chain feature
+
+When a tweet quotes or replies to another tweet, Muscat resolves the full chain — up to 2 levels deep — and the slash command stitches the conversation together in the digest. You always see the original post alongside the response, giving you complete context without needing to click through to Twitter.
+
+This applies in the digest output too: quoted tweets appear nested with a `> Quoting` label, and replied-to tweets appear with `> In reply to`.
+
+## Limitations
+
+- The command only works in Claude Code or Claude Desktop with the `.claude/commands/` folder present in the project directory.
+- The home timeline fetch requires OAuth 1.0a credentials (all 4 tokens in `.env`). The keyword search works with a Bearer Token alone, but you will not see your personalized timeline without full OAuth.
+- Twitter's Basic API tier ($100/month) is required for both search and timeline access. The free tier is severely rate-limited.
+
+## After the digest: posting a quote-tweet
+
+Once Claude presents the digest, you can ask it to quote-tweet any item with your own commentary. Claude will draft the text, confirm the exact tweet ID with you, then post — see [Posting tweets](/usage/posting-tweets) for the full workflow.

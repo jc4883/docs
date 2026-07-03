@@ -1,0 +1,139 @@
+---
+title: 'Customize what Muscat fetches and surfaces'
+description: 'Tune the lookback window, result volume, and digest scoring to match how often you run Muscat and what kind of AI content you want surfaced.'
+---
+
+Out of the box, Muscat is calibrated for twice-daily runs against a moderately busy timeline. But the right configuration depends on how you use it: how often you check in, how active the accounts you follow are, and whether you care more about breadth or depth. This guide covers every knob you can turn — from how far back each fetch looks, to how the AI summarization step decides what makes the final digest.
+
+## Adjusting the lookback window
+
+The `lookback_hours` setting in `config/keywords.yaml` tells Muscat how far into the past each fetch should reach. Every tweet and search result older than this window is ignored.
+
+```yaml config/keywords.yaml
+home_timeline_max_results: 100
+lookback_hours: 6
+```
+
+The default of `6` pairs with a twice-daily schedule: an 8am run covers overnight through morning, and a 5pm run covers the rest of the workday. If you change how often Muscat runs, change this value to match so fetches neither overlap nor leave gaps in coverage.
+
+| Run frequency | Recommended `lookback_hours` |
+|---|---|
+| Every 2 hours | `2` |
+| Three times daily | `4` |
+| Twice daily (default) | `6` |
+| Once daily | `24` |
+| Catch-up after time away | `48` or higher |
+
+<Warning>
+  Very large lookback windows combined with high `home_timeline_max_results` values can exhaust your Twitter API rate limits in a single fetch. If you increase `lookback_hours` significantly, monitor your API usage in the developer portal.
+</Warning>
+
+## Controlling result volume
+
+`home_timeline_max_results` sets the maximum number of tweets Muscat retrieves from your home timeline per run. The default is `100`.
+
+```yaml config/keywords.yaml
+home_timeline_max_results: 100
+lookback_hours: 6
+```
+
+For busier timelines — if you follow hundreds of active accounts — increase this to `200` or `500` to avoid missing content. For quieter timelines or shorter lookback windows, you can reduce it to keep runs faster.
+
+You can also override this value for a single run without editing the config file:
+
+```bash
+npx tsx src/fetch-tweets.ts --max-results 200
+```
+
+This is useful for one-off catch-up runs without changing your default settings.
+
+## Understanding digest scoring
+
+When you run `/summarize-ai-news` inside Claude Code or Claude Desktop, Claude reads the fetched tweet data and applies a set of prioritization rules defined in `.claude/commands/summarize-ai-news.md`. These rules determine what ends up in the digest and where.
+
+### What Claude prioritizes
+
+<AccordionGroup>
+  <Accordion title="Long-form posts with original analysis">
+    Tweets that use X's extended post format (`note_tweet` content, over 280 characters) signal that someone took the time to write something substantive. Claude treats these as high-priority candidates for the **Deep Reads** section, especially when the content contains original argument or insight rather than summary.
+  </Accordion>
+  <Accordion title="High bookmark counts">
+    Muscat fetches `bookmark_count` as part of the public metrics for every tweet. Bookmarks indicate people saved something to read later — a stronger signal of depth than likes or retweets, which reward brevity. Claude uses bookmark count as a quality proxy when ranking content.
+  </Accordion>
+  <Accordion title="Deep threads and quote chains">
+    Muscat resolves referenced tweets up to 2 levels deep automatically (see [Tweet chain depth](#tweet-chain-depth) below). Claude uses this full context to identify quote chains where someone adds meaningful commentary to another substantive post, and surfaces both the original and the response as a conversation in the digest.
+  </Accordion>
+  <Accordion title="Links to research and technical content">
+    Tweets linking to papers, benchmarks, or technical deep-dives are routed to the **Research & Papers** section. Claude distinguishes between a tweet that links to an arxiv paper versus one that links to a marketing page.
+  </Accordion>
+</AccordionGroup>
+
+### What Claude skips
+
+Claude filters out content that doesn't add informational value:
+
+- Retweets with no added commentary
+- Promotional content and engagement bait
+- Reactions without substance ("wow", "this is insane") unless the linked content is independently significant
+- Duplicate coverage of the same story, even when the tweet IDs differ
+
+The filtering logic prioritizes **depth over engagement**. A 50-like long-form post with original thinking beats a 5,000-like one-liner.
+
+### Digest sections
+
+The summarization produces five sections in order of depth:
+
+| Section | What goes here |
+|---|---|
+| **Deep Reads** | Long-form posts, threads, significant quote chains |
+| **Research & Papers** | New papers, benchmarks, research results |
+| **Industry Moves** | Substantive company news, model releases, funding |
+| **Notable Takes** | Sharp or contrarian short observations |
+| **Quick Hits** | One-liners for remaining noteworthy items |
+
+## Tweet chain depth
+
+Muscat automatically resolves referenced tweets up to 2 levels deep. This means when a tweet in your timeline quotes another tweet, and that quoted tweet itself quotes or replies to something, you see all three layers in the fetched data.
+
+Muscat makes additional API calls to fetch any tweet IDs referenced by the initial results, then stitches these chains together so Claude always has the full conversation context — not just an isolated tweet.
+
+You do not need to configure anything for this behavior; it runs automatically on every fetch.
+
+## AI search queries
+
+<Tip>
+  Muscat's AI keyword search runs two fixed queries against the Twitter search API, sorted by relevancy:
+
+  ```
+  AI OR LLM OR GPT OR Claude lang:en -is:retweet -is:reply
+  "frontier model" OR "foundation model" OR "open source AI" lang:en -is:retweet -is:reply
+  ```
+
+  These queries are defined in `src/fetch-tweets.ts` and are not currently configurable through `keywords.yaml`. To focus on a different topic area entirely, use `--format json` to get the raw data and process it with your own tooling:
+
+  ```bash
+  npx tsx src/fetch-tweets.ts --format json > data/raw.json
+  ```
+</Tip>
+
+## Output formats
+
+Muscat supports three output modes, controlled with the `--format` flag:
+
+<CodeGroup>
+
+```bash Markdown digest (default)
+npx tsx src/fetch-tweets.ts
+```
+
+```bash JSON (raw API data)
+npx tsx src/fetch-tweets.ts --format json
+```
+
+```bash Save to file
+npx tsx src/fetch-tweets.ts --output-file data/my-digest.md
+```
+
+</CodeGroup>
+
+The JSON format returns the raw Twitter API response structure, including all expanded user objects and referenced tweets — useful for building your own processing pipeline on top of what Muscat fetches.

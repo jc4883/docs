@@ -1,0 +1,89 @@
+---
+title: "Digest sections produced by /summarize-ai-news"
+description: "Reference for the five structured sections Claude produces when you run the /summarize-ai-news slash command, and how content is selected for each."
+---
+
+When you run `/summarize-ai-news`, Claude fetches your Twitter/X home timeline and keyword search results, resolves the full reference chains for every tweet (quotes, replies, up to two levels deep), and then organises the material into a structured AI news digest. The digest is divided into five named sections, each with its own selection logic. Understanding what belongs in each section helps you anticipate what you will find and tells you why certain tweets appear where they do.
+
+<Tip>
+  The slash command prioritizes depth over engagement. A 50-like long-form post with original thinking will appear before a 5,000-like one-liner reaction. Bookmark counts carry extra weight in the scoring model because they are the strongest signal that a reader found something worth returning to.
+</Tip>
+
+## Deep Reads
+
+Deep Reads contains all substantive long-form posts and threads that reward careful reading. This is the most important section in the digest and typically the longest.
+
+**What appears here:**
+
+- Long-form posts that use X's extended note tweet format (over 280 characters) when they contain original analysis, a developed argument, or a detailed technical explanation
+- Threads where a single author breaks down a topic across multiple connected posts
+- Quote chains where someone adds meaningful commentary to another substantive post — shown as a full conversation with both the original post and the response, so you see the complete exchange without leaving the digest
+- X Articles, when the author has published long-form content on the platform
+
+**How Claude decides:** Claude looks for posts where the author is doing original thinking rather than reacting, aggregating, or amplifying. A long post that merely summarises news belongs in a later section. A shorter post that contains a genuinely novel frame or argument may still qualify if the insight is sharp enough.
+
+**What you can expect:** For each item, Claude writes a 2–3 sentence summary of the core argument or insight, explains why it matters to the AI field, and includes the original author's handle and a direct link to the tweet or article.
+
+## Research & Papers
+
+Research & Papers covers notable new academic papers, preprints, benchmarks, and empirical research results that were shared on the timeline during the lookback window.
+
+**What appears here:**
+
+- New papers or preprints shared by authors or the research community, with a link to the paper or write-up when one is available
+- Benchmark results or evaluations that change how practitioners think about model capabilities
+- Replication studies, negative results, or substantive critiques of prior research — these are included when they carry genuine evidentiary weight
+
+**How Claude decides:** Claude looks for posts that reference a specific piece of research (not just a field in general) and that convey what was found. A tweet that says "interesting paper" with a link qualifies only if Claude can summarise the finding from the linked content. Vague gestures at "new research" without specifics are skipped.
+
+**What you can expect:** A brief description of what was found or published, why it is significant to the AI field, and a link to the paper or write-up when available.
+
+## Industry Moves
+
+Industry Moves tracks company announcements, product launches, model releases, and funding rounds. The selection filter here is strict: only substantive news with technical or strategic implications is included.
+
+**What appears here:**
+
+- Model releases that include capability details, benchmark numbers, or information about architecture and training
+- Product launches with a clear description of what the product does
+- Partnerships or acquisitions where the technical or business implications are stated explicitly
+- Funding rounds when the amount and strategic context are both present
+
+**What does not appear here:**
+
+- Vague teasers or "something big is coming" announcements with no details
+- Job postings, even from notable AI companies
+- Content-free PR statements and marketing copy
+- Speculation or rumour without a named source
+
+**How Claude decides:** Claude applies a simple test — would a practitioner learn something specific and actionable from this? If the answer is no, the item is skipped or moved to Quick Hits.
+
+## Notable Takes
+
+Notable Takes is where sharp, contrarian, or genuinely thought-provoking observations land, even when they are brief. This section recognises that a single well-constructed sentence can be more valuable than a long post that says nothing new.
+
+**What appears here:**
+
+- Concise positions that reframe a widely-held assumption or introduce a useful new lens
+- Predictions with a clear, falsifiable claim rather than vague hedges
+- Pushback on consensus views when the argument is specific rather than reflexively contrary
+- Observations with high bookmark counts, which signal that readers found them worth saving even if engagement was otherwise modest
+
+**How Claude decides:** Claude looks for posts where the author is staking out a position and the position is interesting, not just provocative. A take that generates strong reactions but contains no substance is not included. The test is: would a thoughtful practitioner bookmark this to think about later?
+
+## Quick Hits
+
+Quick Hits is a short list of remaining noteworthy items that did not fit the four sections above. Each entry is a single line with a link.
+
+**What appears here:**
+
+- Useful open-source tools, repos, or demos shared on the timeline
+- Event announcements (conferences, workshops, deadlines) relevant to AI practitioners
+- Brief community observations that are worth noting but do not warrant a full summary
+- Interesting links shared without much commentary, when the link itself is clearly relevant
+
+**How Claude decides:** Quick Hits catches anything that passed the basic relevance filter but does not have enough substance or context for a named section. It is a best-effort collection, not an exhaustive list of everything that was filtered out.
+
+<Note>
+  If Muscat finds no relevant content in a section during a particular run, that section may be omitted from the digest rather than left empty. A digest with three sections is normal during quieter periods and does not indicate an error.
+</Note>

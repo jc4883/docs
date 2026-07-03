@@ -1,0 +1,94 @@
+---
+title: "CLI flags and modes of operation"
+description: "Complete reference for every flag accepted by fetch-tweets.ts and post-tweet.ts, with examples for each supported mode of operation."
+---
+
+Muscat exposes two runnable scripts: `src/fetch-tweets.ts` for pulling your Twitter/X timeline and producing a digest, and `src/post-tweet.ts` for publishing a tweet or quote-tweet. Both scripts are invoked with `npx tsx` and accept flags via standard CLI argument parsing. All progress messages and errors are written to `stderr`, so `stdout` carries only the requested output and can be piped or redirected freely.
+
+## `src/fetch-tweets.ts`
+
+The main fetcher script. By default it fetches your home timeline and runs a relevancy-sorted keyword search, merges and deduplicates the results, saves raw JSON to `data/home-feed-<timestamp>.json`, and writes a markdown digest to `stdout`.
+
+<ParamField path="--format" type="string" default="digest">
+  Controls the output format. Accepted values are `digest` (the default), which produces a structured markdown document sorted by content quality, and `json`, which outputs the raw merged Twitter API response as pretty-printed JSON. The raw JSON file is always saved to `data/` regardless of this flag.
+</ParamField>
+
+<ParamField path="--output-file" type="string">
+  Path to a file where Muscat writes its output instead of `stdout`. Progress logs still go to `stderr` as normal. Use this when you want to capture the digest to disk without shell redirection, or when running Muscat from a script that reads `stdout` for other purposes.
+</ParamField>
+
+<ParamField path="--max-results" type="number">
+  Overrides `home_timeline_max_results` from `config/keywords.yaml` for this run only. Useful for quick tests with a small dataset or for one-off runs where you want more coverage than your default setting. Does not modify the YAML file.
+</ParamField>
+
+<ParamField path="--tweet-id" type="string">
+  Fetches a single tweet by its ID instead of running the full timeline and search pipeline. When this flag is present, Muscat skips home timeline fetching, skips keyword search, resolves the referenced tweet chain for the specified ID, and outputs the result in whichever format `--format` requests. Use this to inspect a specific tweet and its quotes or replies.
+</ParamField>
+
+## Modes of operation
+
+### Full digest (default)
+
+Fetches your home timeline and relevancy-sorted keyword search results, merges them, deduplicates by tweet ID, and outputs a markdown digest sorted by content quality score.
+
+```bash
+npx tsx src/fetch-tweets.ts
+```
+
+### JSON output
+
+Runs the same fetch pipeline but outputs the raw merged Twitter API JSON structure to `stdout` instead of a markdown digest. The raw file is still saved to `data/` as usual.
+
+```bash
+npx tsx src/fetch-tweets.ts --format json
+```
+
+### Save to file
+
+Writes output to a specified file path. Progress logs continue to appear in your terminal via `stderr`.
+
+```bash
+npx tsx src/fetch-tweets.ts --output-file data/digest.md
+```
+
+### Single tweet lookup
+
+Fetches one tweet by ID and resolves its reference chain (quotes, replies). Does not contact the home timeline or search endpoints.
+
+```bash
+npx tsx src/fetch-tweets.ts --tweet-id 1234567890123456789
+```
+
+<Note>
+  All progress and error messages go to `stderr`, so you can safely pipe `stdout` to a file or another command without mixing logs into your output. For example: `npx tsx src/fetch-tweets.ts | pbcopy` copies the digest to your clipboard on macOS with no log contamination.
+</Note>
+
+## `src/post-tweet.ts`
+
+Posts a tweet or quote-tweet to your account using the OAuth 1.0a credentials in your `.env`. All four OAuth tokens must be present or the command will fail.
+
+<ParamField path="--text" type="string" required>
+  The text of the tweet to post. Keep it within Twitter/X's character limits. Wrap the value in quotes to preserve spaces and special characters in your shell.
+</ParamField>
+
+<ParamField path="--quote-tweet-id" type="string">
+  The ID of an existing tweet to quote. When provided, your tweet is posted as a quote-tweet with the specified tweet embedded beneath your text. Omit this flag to post a standalone tweet.
+</ParamField>
+
+**Example — post a quote-tweet:**
+
+```bash
+npx tsx src/post-tweet.ts \
+  --text "Great insight on reasoning models" \
+  --quote-tweet-id 1234567890123456789
+```
+
+**Example — post a standalone tweet:**
+
+```bash
+npx tsx src/post-tweet.ts --text "Thoughts on today's AI digest"
+```
+
+<Warning>
+  Always confirm the exact tweet text and target tweet ID before running `post-tweet.ts`. The `/summarize-ai-news` slash command will help you draft and verify the text first, but the post is irreversible once sent.
+</Warning>

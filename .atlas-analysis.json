@@ -1,0 +1,72 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Muscat",
+  "projectDescription": "A TypeScript CLI tool that fetches your Twitter/X timeline and AI-focused search results, then generates a structured AI news digest using Claude Code slash commands.",
+  "theme": "luma",
+  "primaryColor": "#1D9BF0",
+  "lightColor": "#E8F5FF",
+  "darkColor": "#0A1929",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/slash-command",
+              "usage/cli",
+              "usage/output-formats",
+              "usage/posting-tweets"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/twitter-api-setup",
+              "guides/scheduling",
+              "guides/customizing-digest"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/configuration-options",
+              "reference/cli-flags",
+              "reference/digest-sections"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Fetch home timeline and AI-keyword search results from Twitter/X API v2",
+    "Resolve full tweet chains (quotes and replies up to 2 levels deep)",
+    "Generate structured AI news digest via /summarize-ai-news Claude slash command",
+    "Smart engagement-based scoring to surface high-quality content",
+    "Output as markdown digest or raw JSON",
+    "Post quote-tweets directly from the CLI",
+    "Configurable lookback window and result limits via YAML",
+    "Scheduled twice-daily digest generation via cron"
+  ],
+  "publicApiSurface": [
+    "/summarize-ai-news (Claude Code slash command)",
+    "npx tsx src/fetch-tweets.ts --format digest|json|markdown",
+    "npx tsx src/fetch-tweets.ts --source all",
+    "npx tsx src/fetch-tweets.ts --max-results <n>",
+    "npx tsx src/fetch-tweets.ts --tweet-id <id>",
+    "npx tsx src/fetch-tweets.ts --output-file <path>",
+    "npx tsx src/post-tweet.ts --text <text> --quote-tweet-id <id>",
+    "config/keywords.yaml: home_timeline_max_results, lookback_hours",
+    ".env: TWITTER_BEARER_TOKEN, TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET"
+  ]
+}

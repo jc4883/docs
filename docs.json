@@ -1,0 +1,58 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "Muscat",
+  "colors": {
+    "primary": "#1D9BF0",
+    "light": "#E8F5FF",
+    "dark": "#0A1929"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/jc4883/twitter-summary"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/slash-command",
+              "usage/cli",
+              "usage/output-formats",
+              "usage/posting-tweets"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/twitter-api-setup",
+              "guides/scheduling",
+              "guides/customizing-digest"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/configuration-options",
+              "reference/cli-flags",
+              "reference/digest-sections"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

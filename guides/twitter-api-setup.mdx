@@ -1,0 +1,98 @@
+---
+title: 'Connect Muscat to the Twitter/X API'
+description: 'Get your Twitter/X API credentials and configure them in Muscat so you can fetch your home timeline and run AI-focused keyword searches.'
+---
+
+Muscat talks to Twitter/X through two separate credential systems. Bearer Token authentication covers app-level read access — enough to run keyword searches. OAuth 1.0a user context is what gives Muscat permission to read your personal home timeline and, if you want it, post tweets on your behalf. You need both to get the full digest experience. This guide walks you through obtaining all five credential values and dropping them into your `.env` file.
+
+<Warning>
+  Home timeline access and keyword search at any meaningful volume require the Twitter API **Basic tier**, which costs $100/month. The free tier is severely rate-limited and will exhaust its quota within a few fetches. You can test search against a free account, but expect to hit limits quickly.
+</Warning>
+
+## The two credential types
+
+Before diving into the steps, it helps to understand what each set of credentials does and why Muscat needs both.
+
+<AccordionGroup>
+  <Accordion title="Bearer Token — app-level access">
+    A Bearer Token is issued at the application level and does not represent any individual user. Muscat uses it to run the AI-focused keyword searches (the `AI OR LLM OR GPT` queries). It is free to generate from the developer portal and has no extra approval requirements. If you only want search results and have no interest in your home timeline, a Bearer Token is the only credential you need.
+  </Accordion>
+  <Accordion title="OAuth 1.0a user context — personal timeline access">
+    The four OAuth tokens (API Key, API Secret, Access Token, Access Token Secret) grant Muscat access to your personal Twitter account. This is required to fetch your home timeline — the tweets from people you follow — and to post tweets on your behalf. You generate the API Key and Secret at the app level, then generate the Access Token and Secret specifically for your user account by clicking "Generate" in the developer portal.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  If you only want AI keyword search results and don't need your home timeline, you can set just `TWITTER_BEARER_TOKEN` in your `.env` and skip the four OAuth tokens entirely. Muscat will fall back to search-only mode automatically.
+</Note>
+
+## Setting up your credentials
+
+<Steps>
+  <Step title="Create a developer account">
+    Go to [developer.twitter.com](https://developer.twitter.com) and sign in with your Twitter/X account. If you have not used the developer portal before, you will be prompted to apply for access. Complete the application — describe your use case as building a personal AI news digest tool. Approval is typically instant for basic access.
+  </Step>
+
+  <Step title="Create a project and app">
+    From the developer portal dashboard, click **Projects & Apps → New Project**. Give your project a name (e.g., "Muscat"), choose the **Production** environment, and create a new app inside it. The app name must be unique across Twitter, so something like `muscat-yourname` works well. Once created, you land on the app's settings page.
+  </Step>
+
+  <Step title="Set app permissions to Read and Write">
+    In your app's settings, find **User authentication settings** and click **Set up**. Set the app permissions to **Read and Write**. This is required for the OAuth user context that lets Muscat read your home timeline and optionally post tweets. Without Write permission, Access Token generation will produce read-only tokens that won't cover all of Muscat's features.
+
+    Under **Type of App**, select **Web App, Automated App or Bot**. For the callback and website URL fields you can use a placeholder like `https://localhost` — Muscat uses PIN-based OAuth and does not need a real redirect URL.
+  </Step>
+
+  <Step title="Copy your Bearer Token">
+    Navigate to the **Keys and Tokens** tab of your app. In the **Authentication Tokens** section, find **Bearer Token** and click **Copy**. This is your app-level token for search. Save it somewhere safe — you won't be able to view it again after leaving the page, though you can regenerate it at any time.
+  </Step>
+
+  <Step title="Copy your API Key and Secret">
+    On the same **Keys and Tokens** tab, locate **API Key and Secret** under the **Consumer Keys** section. Click **Regenerate** if you haven't stored these yet, then copy both values. These are app-level credentials.
+  </Step>
+
+  <Step title="Generate your Access Token and Secret">
+    Scroll down to **Authentication Tokens → Access Token and Secret**. Click **Generate**. Twitter will display your Access Token and Access Token Secret. Copy both immediately — the secret is only shown once. These credentials are tied to your personal account and give Muscat user-level access.
+  </Step>
+
+  <Step title="Add all five values to your .env file">
+    Copy `config/example.env` to `.env` at the root of your Muscat directory, then fill in all five values:
+
+    ```bash
+    cp config/example.env .env
+    ```
+
+    ```ini .env
+    TWITTER_BEARER_TOKEN=your_bearer_token_here
+    TWITTER_API_KEY=your_api_key_here
+    TWITTER_API_SECRET=your_api_secret_here
+    TWITTER_ACCESS_TOKEN=your_access_token_here
+    TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret_here
+    ```
+
+    Keep this file out of version control. If your project has a `.gitignore`, confirm `.env` is listed there before committing anything.
+  </Step>
+</Steps>
+
+## Verifying the setup
+
+Once your `.env` is saved, run a quick fetch to confirm everything connects:
+
+```bash
+npx tsx src/fetch-tweets.ts
+```
+
+You should see log output like:
+
+```
+[INFO] Fetched 87 tweets from home timeline
+[INFO] Fetched 42 tweets from relevancy search
+[INFO] 112 unique tweets after deduplication
+[INFO] Raw data saved to data/home-feed-2024-01-15T08-00-00.json
+```
+
+If the home timeline step fails with an authentication error, double-check that all four OAuth tokens are present and that your app permissions are set to **Read and Write** (not Read only).
+
+<Tip>
+  If you see a `401 Unauthorized` error only on home timeline calls but search works, the most common cause is Access Tokens generated before you updated your app's permissions. Go back to the **Keys and Tokens** tab, revoke the existing Access Token, and generate a new one after confirming the app is set to Read and Write.
+</Tip>

@@ -1,0 +1,55 @@
+---
+title: "Muscat: Twitter/X AI news digest for Claude Code"
+description: "Muscat fetches your Twitter/X timeline and AI search results, then generates a structured AI news digest using Claude Code slash commands."
+---
+
+Muscat is a CLI tool that connects to the Twitter/X API v2 to pull your home timeline and AI-focused keyword searches, then produces a curated digest of the most substantive AI content. Run it on demand with a single slash command in Claude Code, or schedule it to deliver twice-daily summaries automatically.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Install Muscat, add your Twitter credentials, and generate your first AI digest in minutes.
+  </Card>
+  <Card title="Twitter API Setup" icon="key" href="/guides/twitter-api-setup">
+    Create a Twitter developer app and get the credentials Muscat needs to access your timeline.
+  </Card>
+  <Card title="Slash Command" icon="terminal" href="/usage/slash-command">
+    Use the built-in `/summarize-ai-news` command in Claude Code to fetch and summarize at once.
+  </Card>
+  <Card title="CLI Reference" icon="code" href="/reference/cli-flags">
+    Explore all CLI flags for fetching tweets, choosing output formats, and writing to files.
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Connect to Twitter/X">
+    Add your Twitter API credentials to `.env`. Muscat uses OAuth 1.0a for home timeline access and a Bearer Token for keyword searches.
+  </Step>
+  <Step title="Fetch your feed">
+    Run `/summarize-ai-news` in Claude Code (or call the CLI directly) to pull your home timeline and AI-relevant search results from the past 6 hours.
+  </Step>
+  <Step title="Get your digest">
+    Muscat scores and ranks tweets by engagement quality, resolves full quote and reply chains, and presents a structured digest with sections for Deep Reads, Research, Industry Moves, and more.
+  </Step>
+  <Step title="Stay in the loop">
+    Schedule Muscat to run at 8am and 5pm daily so you never miss important AI developments in your network.
+  </Step>
+</Steps>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Full tweet chain resolution" icon="link">
+    Muscat fetches quoted tweets and reply context up to 2 levels deep, so you always see the full conversation.
+  </Card>
+  <Card title="Smart content scoring" icon="chart-bar">
+    Tweets are ranked by likes, retweets, bookmarks, and content length — surfacing substantive posts over viral noise.
+  </Card>
+  <Card title="Flexible output formats" icon="file-alt">
+    Output your digest as a readable markdown report or raw JSON for further processing.
+  </Card>
+  <Card title="Post from the CLI" icon="paper-plane">
+    Draft and publish quote-tweets directly from your terminal without leaving the workflow.
+  </Card>
+</CardGroup>

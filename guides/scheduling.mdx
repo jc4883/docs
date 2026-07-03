@@ -1,0 +1,121 @@
+---
+title: 'Schedule Muscat to run automatically'
+description: 'Run your AI news digest twice a day without manual effort using Claude Desktop natural language scheduling or a traditional cron job on any Unix system.'
+---
+
+Once Muscat is working interactively, the natural next step is to have it run on its own — pulling in your timeline at 8am before you start work, and again at 5pm before you wrap up. There are two ways to get there: letting Claude Desktop configure the schedule for you through a natural language prompt, or setting up a cron job by hand. Both approaches end up in the same place; the difference is how much manual configuration you want to do.
+
+<Note>
+  When Muscat runs via a scheduled job, it fetches and formats the raw tweet digest but does not produce an AI-summarized output. AI summarization happens when you run `/summarize-ai-news` inside Claude Code or Claude Desktop, where Claude can read the data and produce the structured digest. Scheduled runs give you the raw material ready and waiting.
+</Note>
+
+## Option 1: Claude Desktop scheduling
+
+If you use Claude Desktop, this is the fastest path. Claude can read your system's scheduling configuration and set up the cron or launchd entry for you.
+
+Open Claude Desktop and type:
+
+```
+Schedule /summarize-ai-news to run at 8am and 5pm daily
+```
+
+Claude will interpret that as an instruction to configure OS-level scheduling. On macOS it will typically create a `launchd` plist; on Linux it will edit your crontab. It handles the path resolution and environment variable forwarding automatically. You can adjust the times or frequency by rephrasing the prompt:
+
+```
+Schedule /summarize-ai-news to run once a day at 7am
+```
+
+```
+Run /summarize-ai-news every weekday at 9am and 4pm, skip weekends
+```
+
+Review whatever Claude proposes before confirming — it will show you the configuration it plans to apply.
+
+## Option 2: Manual cron setup
+
+For full control, or if you're running Muscat on a server without Claude Desktop, set up cron directly.
+
+<Steps>
+  <Step title="Open your crontab">
+    ```bash
+    crontab -e
+    ```
+
+    This opens your personal crontab in your default editor. If this is the first time, it will start with an empty file or a brief comment explaining the format.
+  </Step>
+
+  <Step title="Add the two scheduled runs">
+    Paste these lines, replacing `/path/to/muscat` with the absolute path to your Muscat installation:
+
+    ```bash
+    # Muscat — morning digest (8am)
+    0 8 * * * cd /path/to/muscat && npx tsx src/fetch-tweets.ts --output-file data/digest-morning.md 2>>data/cron.log
+
+    # Muscat — evening digest (5pm)
+    0 17 * * * cd /path/to/muscat && npx tsx src/fetch-tweets.ts --output-file data/digest-evening.md 2>>data/cron.log
+    ```
+
+    The `2>>data/cron.log` part appends any errors or info messages to a log file so you can check if a run failed.
+  </Step>
+
+  <Step title="Save and verify">
+    Save the file and exit your editor. Cron installs the new schedule immediately. Verify it was saved:
+
+    ```bash
+    crontab -l
+    ```
+
+    You should see both lines listed. After the next scheduled time passes, check `data/cron.log` and look for the output files to confirm the runs completed.
+  </Step>
+</Steps>
+
+<Tip>
+  Raw JSON is always saved automatically to `data/home-feed-<timestamp>.json` on every fetch, regardless of any cron setup. You will build up a timestamped history of every run, which is useful for replaying data through Claude without hitting the API again.
+</Tip>
+
+## Adjusting run frequency
+
+The two-times-a-day pattern matches Muscat's default `lookback_hours: 6` setting. If you change the schedule, update `lookback_hours` in `config/keywords.yaml` to match so fetches don't overlap or leave gaps.
+
+| Schedule | Recommended `lookback_hours` |
+|---|---|
+| Twice daily (8am / 5pm) | `6` (default) |
+| Once daily | `24` |
+| Three times daily | `4` |
+| Every 2 hours | `2` |
+
+See [Customizing the digest](/guides/customizing-digest) for details on changing the lookback window.
+
+## Troubleshooting cron runs
+
+<AccordionGroup>
+  <Accordion title="The cron job runs but produces no output">
+    Cron runs in a minimal environment and may not have `npx` or `node` on the PATH. Find the full path to `npx`:
+
+    ```bash
+    which npx
+    ```
+
+    Then update your crontab to use the full path:
+
+    ```bash
+    0 8 * * * cd /path/to/muscat && /usr/local/bin/npx tsx src/fetch-tweets.ts --output-file data/digest-morning.md 2>>data/cron.log
+    ```
+  </Accordion>
+  <Accordion title="Authentication errors in cron.log">
+    Cron does not load your shell's environment, so the `.env` file that works interactively may not be read the same way. Muscat loads `.env` using `dotenv` relative to the project root, so as long as `cd /path/to/muscat` runs first and `.env` exists there, it should work. If you still see auth errors, explicitly set the `NODE_ENV` or pass the env file path:
+
+    ```bash
+    0 8 * * * cd /path/to/muscat && DOTENV_CONFIG_PATH=/path/to/muscat/.env npx tsx src/fetch-tweets.ts --output-file data/digest-morning.md 2>>data/cron.log
+    ```
+  </Accordion>
+  <Accordion title="Checking when the last run happened">
+    Every successful run writes a timestamped JSON file to `data/`. List them to see recency:
+
+    ```bash
+    ls -lt data/home-feed-*.json | head -5
+    ```
+
+    The most recent file should have a timestamp matching your last scheduled run time.
+  </Accordion>
+</AccordionGroup>

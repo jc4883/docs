@@ -1,0 +1,104 @@
+---
+title: "Get started with Muscat in 5 minutes"
+description: "Install Muscat, connect your Twitter API credentials, and generate your first AI news digest using the Claude Code slash command or the CLI."
+---
+
+Muscat turns your Twitter/X timeline and AI-focused keyword searches into a structured news digest. This guide walks you through everything you need — from cloning the repo to reading your first digest output — so you can go from zero to a working digest in a single sitting.
+
+## Prerequisites
+
+Before you start, make sure you have the following:
+
+- **Node.js 20 or later** — run `node --version` to check
+- **A Twitter developer account** with an app that has at least Basic API access ($100/mo) — you'll need this for home timeline access
+- **Claude Code or Claude Desktop** — to use the `/summarize-ai-news` slash command
+
+<Tip>
+  If you haven't set up your Twitter developer app yet, follow the [Twitter API Setup guide](/guides/twitter-api-setup) to create your app and obtain the credentials you'll need in the next step.
+</Tip>
+
+## Install and configure Muscat
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone Muscat and move into the project directory:
+
+    ```bash
+    git clone https://github.com/jc4883/twitter-summary.git
+    cd twitter-summary
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install the Node.js dependencies with npm:
+
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Set up your credentials">
+    Copy the example environment file to `.env` at the project root:
+
+    ```bash
+    cp config/example.env .env
+    ```
+
+    Open `.env` and fill in your Twitter API credentials:
+
+    ```bash .env
+    TWITTER_BEARER_TOKEN=your_bearer_token_here
+    TWITTER_API_KEY=your_api_key_here
+    TWITTER_API_SECRET=your_api_secret_here
+    TWITTER_ACCESS_TOKEN=your_access_token_here
+    TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret_here
+    ```
+
+    <Note>
+      Home timeline access requires all four OAuth 1.0a tokens (`TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, and `TWITTER_ACCESS_TOKEN_SECRET`) in addition to the Bearer Token. If you only have a Bearer Token, Muscat can still run in search-only mode — it will fetch AI keyword search results but skip your personal timeline.
+    </Note>
+  </Step>
+
+  <Step title="Run your first digest">
+    You have two ways to generate a digest:
+
+    <CodeGroup>
+
+    ```bash Claude Code slash command
+    /summarize-ai-news
+    ```
+
+    ```bash CLI directly
+    npx tsx src/fetch-tweets.ts
+    ```
+
+    </CodeGroup>
+
+    The slash command is the recommended path if you're using Claude Code — it fetches tweets and then passes them to Claude to produce a formatted digest. The CLI call outputs the raw markdown feed directly to your terminal.
+  </Step>
+</Steps>
+
+## What to expect
+
+After running Muscat, you'll see progress messages on stderr while it fetches data:
+
+```
+[INFO] Fetched 87 tweets from home timeline
+[INFO] Search "AI OR LLM OR GPT OR Claude lang:en -is:re..." returned 50 tweets
+[INFO] Resolving 12 referenced tweets (depth 1)...
+[INFO] 124 unique tweets after deduplication
+[INFO] Raw data saved to data/home-feed-2026-04-21T08-00-00.json
+```
+
+The digest output (on stdout) is structured markdown organized into sections like **Deep Reads**, **Research**, **Industry Moves**, and **Community Highlights** — ranked by engagement signals such as likes, retweets, and bookmarks.
+
+Raw tweet data is also saved automatically to a timestamped JSON file in `data/` so you can inspect or reprocess it later.
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Adjust the lookback window, result count, and keywords to tune your digest.
+  </Card>
+  <Card title="CLI reference" icon="code" href="/reference/cli-flags">
+    Explore all CLI flags for output format, file output, and single tweet lookups.
+  </Card>
+</CardGroup>

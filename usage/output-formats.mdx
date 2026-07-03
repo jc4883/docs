@@ -1,0 +1,120 @@
+---
+title: "Output formats: digest markdown and JSON"
+description: "Muscat outputs either a scored markdown digest sorted by content quality or raw JSON for custom processing — and always saves raw API data to a timestamped file."
+---
+
+Muscat produces two output formats controlled by the `--format` flag. The default `digest` format is a human-readable markdown document sorted by content quality, designed to be read directly or passed to Claude for digest generation. The `json` format outputs the raw Twitter API response structure, suitable for piping to other tools or custom processing. In both cases, the raw API response is always saved to a timestamped JSON file in the `data/` directory.
+
+## Digest format (default)
+
+The digest format is a scored, sorted markdown document. Select it explicitly with `--format digest`, or omit the flag entirely — it is the default.
+
+```bash
+npx tsx src/fetch-tweets.ts
+npx tsx src/fetch-tweets.ts --format digest
+```
+
+### Sorting and scoring
+
+Tweets are sorted by a quality score that prioritizes substantive content over raw engagement. The scoring model weights signals as follows:
+
+- **Likes and retweets** form the base score
+- **Bookmarks** are weighted 3× — a stronger signal that people found content worth saving to read later
+- **Long-form posts** (over 280 characters) receive a significant boost, and posts over 1,000 characters are boosted further
+- **X Articles** receive a large boost, as they represent intentional long-form publishing
+- **Quoted tweets with substantive chains** rank higher than standalone tweets
+
+As a result, a deeply-bookmarked long-form post will consistently rank above a high-like one-liner. The digest is designed to surface writing worth reading, not just writing that went viral.
+
+### Per-tweet format
+
+Each tweet in the digest follows this structure:
+
+```
+- **@username** (Display Name) [high engagement | 1200 likes, 450 RTs, 89 bookmarks, 45,000 impressions]
+  The tweet text here...
+  [Tweet](https://x.com/username/status/1234567890) | 2024-01-15T10:30:00.000Z
+  Links: https://arxiv.org/abs/2401.12345
+  > Quoting **@other** (Other Name) [200 likes, 45 RTs]
+    The quoted tweet text...
+    [Tweet](https://x.com/other/status/9876543210)
+```
+
+Each tweet shows:
+
+- **Author** — `@username` (Display Name) as a bold link
+- **Engagement level** — `low`, `medium`, or `high` based on combined likes and retweets (high: 500+, medium: 50+, low: below 50)
+- **Engagement stats** — likes, RTs, bookmarks (if any), and impressions (if any)
+- **Tweet text** — full text, including `note_tweet` content for long-form posts
+- **Link** — direct link to the tweet on x.com, plus the ISO 8601 timestamp
+- **External links** — any URLs from the tweet's entities, excluding twitter.com/x.com links
+- **Article metadata** — title and URL for X Articles, displayed as `[Article: "Title"] url`
+- **Quoted and replied-to tweets** — nested inline with `> Quoting` or `> In reply to` labels
+
+Nested references are indented further with `>>` labels for chains that go deeper than one level.
+
+### Header and truncation
+
+The document opens with a count header:
+
+```
+# Fetched Tweets (127 shown of 127 total)
+```
+
+If the formatted output would exceed 150,000 characters, the formatter stops and appends:
+
+```
+... truncated (23 tweets remaining)
+```
+
+The header updates to reflect how many tweets were shown versus the total. When passing output to Claude, this limit keeps the context window manageable while still surfacing the highest-scored content first.
+
+## JSON format
+
+The JSON format outputs the raw merged Twitter API response. Select it with `--format json`.
+
+```bash
+npx tsx src/fetch-tweets.ts --format json
+npx tsx src/fetch-tweets.ts --format json --output-file data/raw.json
+```
+
+The output structure matches the Twitter API v2 response envelope:
+
+```typescript
+{
+  data: TweetV2[],           // Main tweet objects
+  includes: {
+    users: UserV2[],         // All referenced users
+    tweets: TweetV2[]        // All referenced tweets (quotes, reply parents)
+  }
+}
+```
+
+This is the same data that gets saved to `data/home-feed-<timestamp>.json` on every run. Use JSON format when you want to:
+
+- Pipe results to `jq` for custom filtering
+- Load data into a database or analytics tool
+- Build your own formatter on top of the raw API fields
+- Inspect the full API response for debugging
+
+```bash
+# Count total tweets fetched
+npx tsx src/fetch-tweets.ts --format json | jq '.data | length'
+
+# Find tweets with more than 1000 likes
+npx tsx src/fetch-tweets.ts --format json | jq '[.data[] | select(.public_metrics.like_count > 1000)]'
+```
+
+## Raw JSON is always saved
+
+Regardless of which `--format` you choose, the fetcher always writes the complete raw API response to a timestamped file in the `data/` directory:
+
+```
+data/home-feed-2024-01-15T10-30-00.json
+```
+
+This file is written before the formatted output is produced, so it exists even if you redirect stdout. It gives you a permanent record of each fetch run that you can reload, diff, or reprocess without hitting the API again.
+
+<Tip>
+  If you want to reformat a previous fetch without making new API calls, read the saved JSON file and pipe it through your own formatter. The structure is identical to `--format json` output.
+</Tip>
